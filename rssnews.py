@@ -66,6 +66,10 @@ def top_keywords(n, doc, corpus):
     return [w[0] for w in sorted_d[:n]]
 
 
+def create_news(i, e):
+    return dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
+
+
 def get_saved():
     corpus = []
     i = 0
@@ -78,7 +82,7 @@ def get_saved():
 
         KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
 
-        news = dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
+        news = create_news(i, e)
         FEED_DATA.append(news)
         i += 1
     return FEED_DATA
@@ -155,6 +159,8 @@ def get_test_data(FEED):
     test_data = []
     test_labels = []
     corpus = []
+    global FEED_DATA
+    FEED_DATA = []
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
@@ -247,6 +253,8 @@ def fetch_feeds(urls):
 
 
 def get_feed_posts(FEED):
+    global FEED_DATA
+    FEED_DATA = []
     corpus = []
     i = 0
     for f in FEED:

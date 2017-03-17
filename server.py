@@ -17,29 +17,6 @@ except Exception as e:
 app = Flask(__name__, static_url_path='', static_folder='')
 gevent.monkey.patch_all()
 
-update_time_sec = 60 * 5  # 5 min
-tmp_file = "{0}/cache.tmp".format(os.path.dirname(os.path.realpath(__file__)))
-
-if not os.path.isfile(tmp_file):
-    os.mknod(tmp_file)
-
-
-def update_cache(tmp_file, cache):
-    with open(tmp_file, 'w') as file:
-        file.write(str(cache))
-
-
-def return_cache(tmp_file, update_time_sec):
-    if os.path.getctime(tmp_file) < (time.time() - update_time_sec):
-        with open(tmp_file, "r") as data:
-                return data
-    return None
-
-
-@app.route('/read')
-def read():
-    pass
-
 
 @app.route('/save/<id>', methods=['POST'])
 def save_view(id):
@@ -83,8 +60,8 @@ def saved_view():
 
 @app.route('/relevant')
 def index_relevant():
-    FEED_DATA = []
-    entries_sorted = None  # return_cache(tmp_file, update_time_sec)
+    print("ML is ON!")
+    entries_sorted = None
 
     if entries_sorted is not None:
         return render_template('index.html', entries=entries_sorted)
@@ -107,7 +84,6 @@ def index_relevant():
 
 @app.route('/')
 def index():
-    FEED_DATA = []
     print("Without ML!")
     entries_sorted = get_feed_posts(FEED)
     data = {
