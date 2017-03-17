@@ -5,6 +5,7 @@ from flask import Flask, render_template, jsonify
 
 from rssnews import dislike, like, process, get_feed_posts, save, get_saved, delete
 
+MAX_WORDS_TITLE = 70
 
 try:
     from feeds import FEED
@@ -12,10 +13,8 @@ except Exception as e:
     print("You need to define your feed sources in feeds.py")
     raise e
 
-app = Flask(__name__, static_url_path='', static_folder='')
+app = Flask(__name__, static_url_path='', static_folder='static')
 gevent.monkey.patch_all()
-
-MAX_WORDS_TITLE = 70
 
 
 @app.template_filter('cut')

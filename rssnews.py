@@ -73,6 +73,7 @@ def create_news(i, e):
 def get_saved():
     corpus = []
     i = 0
+    global FEED_DATA
     FEED_DATA = []
     for e in db.saved.find():
         words = nltk.wordpunct_tokenize(html2text(e['description']))
@@ -103,7 +104,6 @@ def save(id):
 
 
 def delete(id):
-    print(FEED_DATA)
     entry = FEED_DATA[id]
     h = hashlib.sha256(entry['link'].encode('utf-8')).hexdigest()
     db.saved.remove({'hash': h})
