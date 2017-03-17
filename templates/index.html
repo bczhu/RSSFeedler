@@ -1,0 +1,146 @@
+<html>
+<head>
+    <title>No bullshit - just news</title>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-wrapper">
+            <ul class="left hide-on-med-and-down">
+                <li><a href="/">Home</a></li>
+                <li><a href="/relevant">Relevant</a></li>
+                <li><a href="/saved">Saved</a></li>
+                <li>Count: {{ count }}
+            </ul>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row">
+            <h1>No bullshit - just news</h1>
+            <img class="responsive-img" src="/pic.jpg">
+        </div>
+        <div class="row">
+            <div class="collection">
+            {% for e in top %}
+                <div class="collapsible-header">
+                    <div class="col s9">
+                        <i class="large material-icons" style="color:red;">error_outline</i>
+                        <a target="_blank" href="{{ e.link }}">{{ e.title }}</a>
+                    </div>
+                    <div class="col s3">
+                        <a name="like-button" value="{{ e.pk }}">
+                            <i class="material-icons">thumb_up</i>
+                        </a>
+                        <a name="dislike-button" value="{{ e.pk }}">
+                            <i class="material-icons">thumb_down</i>
+                        </a>
+                        <a name="save-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
+                            <i class="material-icons">add</i>
+                        </a>
+                        {% if view_name == "saved" %}
+                            <a name="delete-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
+                                <i class="material-icons">done</i>
+                            </a>
+                        {% endif %}
+                        {{ e.score }}
+                    </div>
+                </div>
+            {% endfor %}
+            {% for e in entries %}
+                <div class="collapsible-header">
+                    <div class="col s9">
+                        <i class="large material-icons">info_outline</i>
+                        <a target="_blank" href="{{ e.link }}">{{ e.title }}</a>
+                    </div>
+                    <div class="col s3">
+                        <a name="like-button" class="btn-small" value="{{ e.pk }}">
+                            <i class="material-icons">thumb_up</i>
+                        </a>
+                        <a name="dislike-button" class="btn-small" value="{{ e.pk }}">
+                            <i class="material-icons">thumb_down</i>
+                        </a>
+                        <a name="save-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
+                            <i class="material-icons">add</i>
+                        </a>
+                        {% if view_name == "saved" %}
+                            <a name="delete-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
+                                <i class="material-icons">done</i>
+                            </a>
+                        {% endif %}
+                        {{ e.score }}
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+    <footer class="page-footer">
+         <div class="footer-copyright">
+           <div class="container">
+           © 2017 Copyright Text
+           </div>
+         </div>
+       </footer>
+
+
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
+    <script>
+        $(document).ready(function(){
+          $("a[name=like-button]").click(function(e){
+              e.preventDefault();
+              var value = $(this).attr("value");
+              $(this).addClass('green');
+              $("a[name=dislike-button").filter(function(){return this.value==value}).addClass('disabled');
+
+              $.ajax({type: "POST",
+                    url: "/like/" + value,
+                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
+                    success:function(result){
+                    }
+            });
+          });
+          $("a[name=dislike-button]").click(function(e){
+              e.preventDefault();
+              var value = $(this).attr("value");
+              $(this).addClass('red');
+              $("a[name=like-button").filter(function(){return this.value==value}).addClass('disabled');
+
+              $.ajax({type: "POST",
+                    url: "/dislike/" + value,
+                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
+                    success:function(result){
+                    }
+            });
+          });
+          $("a[name=save-button]").click(function(e){
+              e.preventDefault();
+              var value = $(this).attr("value");
+              $.ajax({type: "POST",
+                    url: "/save/" + value,
+                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
+                    success:function(result){}
+            });
+          });
+          $("a[name=delete-button]").click(function(e){
+              e.preventDefault();
+              var value = $(this).attr("value");
+              $.ajax({type: "POST",
+                    url: "/delete/" + value,
+                    success:function(result){}
+            });
+          });
+        });
+    </script>
+</body>
+</html>
