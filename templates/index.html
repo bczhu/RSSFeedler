@@ -9,6 +9,14 @@
 
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        .btn {
+            padding: 0 0rem;
+        }
+        nav {
+            background-color: #90caf9;
+        }
+    </style>
 </head>
 <body>
     <nav>
@@ -35,10 +43,10 @@
                         <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
                     </div>
                     <div class="col s3">
-                        <a name="like-button" value="{{ e.pk }}">
+                        <a name="like-button" class="btn waves-effect waves-teal" value="{{ e.pk }}">
                             <i class="material-icons">thumb_up</i>
                         </a>
-                        <a name="dislike-button" value="{{ e.pk }}">
+                        <a name="dislike-button" class="btn waves-effect waves-teal"  value="{{ e.pk }}">
                             <i class="material-icons">thumb_down</i>
                         </a>
                         <a name="save-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
@@ -60,10 +68,10 @@
                         <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
                     </div>
                     <div class="col s3">
-                        <a name="like-button" class="btn-small" value="{{ e.pk }}">
+                        <a name="like-button" class="btn waves-effect waves-teal" value="{{ e.pk }}">
                             <i class="material-icons">thumb_up</i>
                         </a>
-                        <a name="dislike-button" class="btn-small" value="{{ e.pk }}">
+                        <a name="dislike-button" class="btn waves-effect waves-teal"  value="{{ e.pk }}">
                             <i class="material-icons">thumb_down</i>
                         </a>
                         <a name="save-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
@@ -81,14 +89,6 @@
             </div>
         </div>
     </div>
-    <footer class="page-footer">
-         <div class="footer-copyright">
-           <div class="container">
-           © 2017 Copyright Text
-           </div>
-         </div>
-       </footer>
-
 
     <!--Import jQuery before materialize.js-->
     <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
