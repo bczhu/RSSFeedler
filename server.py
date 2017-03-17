@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import os
-import time
-import gevent.monkey
 
+import gevent.monkey
 from flask import Flask, render_template, jsonify
 
 from rssnews import dislike, like, process, get_feed_posts, save, get_saved, delete
@@ -16,6 +14,15 @@ except Exception as e:
 
 app = Flask(__name__, static_url_path='', static_folder='')
 gevent.monkey.patch_all()
+
+MAX_WORDS_TITLE = 70
+
+
+@app.template_filter('cut')
+def reverse_filter(s):
+    if len(s) > MAX_WORDS_TITLE:
+        return "".join(s[:MAX_WORDS_TITLE]) + "..."
+    return s
 
 
 @app.route('/save/<id>', methods=['POST'])

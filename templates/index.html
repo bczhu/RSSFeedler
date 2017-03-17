@@ -34,7 +34,7 @@
                 <div class="collapsible-header">
                     <div class="col s9">
                         <i class="large material-icons" style="color:red;">error_outline</i>
-                        <a target="_blank" href="{{ e.link }}">{{ e.title }}</a>
+                        <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
                     </div>
                     <div class="col s3">
                         <a name="like-button" value="{{ e.pk }}">
@@ -59,7 +59,7 @@
                 <div class="collapsible-header">
                     <div class="col s9">
                         <i class="large material-icons">info_outline</i>
-                        <a target="_blank" href="{{ e.link }}">{{ e.title }}</a>
+                        <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
                     </div>
                     <div class="col s3">
                         <a name="like-button" class="btn-small" value="{{ e.pk }}">
