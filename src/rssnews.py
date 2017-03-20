@@ -17,7 +17,7 @@ NUMBER_OF_KEYWORDS = 30
 FEED_DATA = []
 KEYWORDS = []
 client = pymongo.MongoClient()
-client = pymongo.MongoClient('localhost', 27017)
+client = pymongo.MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
 db = client['feed']
 pos = db.pos
 neg = db.neg
@@ -65,6 +65,8 @@ def top_keywords(n, doc, corpus):
     sorted_d.reverse()
     return [w[0] for w in sorted_d[:n]]
 
+
+## e["media_thumbnail"][0]["url"]
 
 def create_news(i, e):
     return dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
