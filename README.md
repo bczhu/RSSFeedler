@@ -19,7 +19,11 @@ After Prismatic decided to shut down I wanted to get the same functionality -- I
 
 ##### Installation
 
+Create feeds.py with `FEED` list of RSS sources you interested in.
+
+Then do:
+
 ```bash
-    docker-compose build
-    docker-compose up
+docker-compose build
+docker-compose up
 ```
