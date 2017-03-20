@@ -1,11 +1,12 @@
 <html>
 <head>
     <title>No bullshit - just news</title>
-    <!--Import Google Icon Font-->
     <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-
-    <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/css/materialize.min.css">
+
+    <script type="text/javascript" src="/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="/materialize.min.js"></script>
+    <script type="text/javascript" src="/script.js"></script>
 
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -88,56 +89,5 @@
             </div>
         </div>
     </div>
-
-    <!--Import jQuery before materialize.js-->
-    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.98.0/js/materialize.min.js"></script>
-    <script>
-        $(document).ready(function(){
-          $("a[name=like-button]").click(function(e){
-              e.preventDefault();
-              var value = $(this).attr("value");
-              $(this).addClass('green');
-              $("a[name=dislike-button").filter(function(){return this.value==value}).addClass('disabled');
-
-              $.ajax({type: "POST",
-                    url: "/like/" + value,
-                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
-                    success:function(result){
-                    }
-            });
-          });
-          $("a[name=dislike-button]").click(function(e){
-              e.preventDefault();
-              var value = $(this).attr("value");
-              $(this).addClass('red');
-              $("a[name=like-button").filter(function(){return this.value==value}).addClass('disabled');
-
-              $.ajax({type: "POST",
-                    url: "/dislike/" + value,
-                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
-                    success:function(result){
-                    }
-            });
-          });
-          $("a[name=save-button]").click(function(e){
-              e.preventDefault();
-              var value = $(this).attr("value");
-              $.ajax({type: "POST",
-                    url: "/save/" + value,
-                    //data: { id: $("#id").val(), access_token: $("#access_token").val() },
-                    success:function(result){}
-            });
-          });
-          $("a[name=delete-button]").click(function(e){
-              e.preventDefault();
-              var value = $(this).attr("value");
-              $.ajax({type: "POST",
-                    url: "/delete/" + value,
-                    success:function(result){}
-            });
-          });
-        });
-    </script>
 </body>
 </html>

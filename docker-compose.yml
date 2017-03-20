@@ -1,9 +1,16 @@
 web:
   build: .
-  command: python ./src/server.py
+  command: uwsgi --socket 0.0.0.0:5000 --chdir /src --protocol=http --wsgi-file server.py --callable app
   ports:
     - "5000:5000"
   links:
     - db
 db:
   image: mongo:3.0.2
+nginx:
+  restart: always
+  build: ./nginx/
+  ports:
+    - "80:80"
+  links:
+    - web:web

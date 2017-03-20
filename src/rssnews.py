@@ -9,18 +9,31 @@ import feedparser
 from html2text import html2text
 from gevent.pool import Pool
 
-from sklearn.svm import SVC
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
+
 
 NUMBER_OF_KEYWORDS = 30
 FEED_DATA = []
 KEYWORDS = []
 client = pymongo.MongoClient()
-client = pymongo.MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
+DEBUG = False
+ALGORITHM = "NB"
+
+if DEBUG:
+    client = pymongo.MongoClient('localhost', 27017)
+else:
+    client = pymongo.MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
+
 db = client['feed']
 pos = db.pos
 neg = db.neg
+
+if ALGORITHM == "NB":
+    from sklearn.naive_bayes import MultinomialNB
+    classifier_linear = MultinomialNB()
+elif ALGORITHM == "SVC":
+    from sklearn.svm import SVC
+    classifier_linear = SVC(kernel='linear', probability=True)
 
 # tf-idf implementation
 # from http://timtrueman.com/a-quick-foray-into-linear-algebra-and-python-tf-idf/
@@ -67,7 +80,6 @@ def top_keywords(n, doc, corpus):
 
 
 ## e["media_thumbnail"][0]["url"]
-
 def create_news(i, e):
     return dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
 
@@ -207,9 +219,6 @@ def process(FEED):
     print("Overall length: {}".format(len(test_data)))
 
     # Perform classification with SVM, kernel=linear
-    # classifier_linear = svm.SVC(kernel='linear', probability=True)
-    # MultinomialNB
-    classifier_linear = MultinomialNB()
     t0 = time.time()
 
     classifier_linear.fit(train_vectors, train_labels)
