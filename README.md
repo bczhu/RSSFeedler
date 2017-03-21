@@ -27,3 +27,17 @@ Then do:
 docker-compose build
 docker-compose up
 ```
+
+
+##### Dump db
+
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container_id>
+mongodump -v --host <container_ip>:27017 --db 'feed' --out=./backup/
+mongodump -v --host <container_ip>:27017 --db 'saved' --out=./backup/
+
+
+##### Restore db
+
+docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <container_id>
+mongorestore --drop -v --host <container_ip>:27017 --db 'feed' ./backup/feed/
+mongorestore --drop -v --host <container_ip>:27017 --db 'saved' ./backup/feed/
