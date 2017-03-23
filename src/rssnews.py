@@ -193,8 +193,9 @@ def get_test_data(FEED):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            if db.neg.find_one({'hash': get_hash(e['link'])}) \
-                    or db.pos.find_one({'hash': get_hash(e['link'])}):
+            link = e.get('link', '')
+            if db.neg.find_one({'hash': get_hash(link)}) \
+                    or db.pos.find_one({'hash': get_hash(link)}):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
@@ -241,7 +242,7 @@ def process(FEED):
         results = classifier.predict_proba(test_vectors)[i]
         prob_per_class = dict(zip(classifier.classes_, results))
 
-        news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i]['link'], 'score': prob_per_class['pos']})
+        news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i].get('link', ''), 'score': prob_per_class['pos']})
         news_list.append(news)
 
     t2 = time.time()
@@ -280,9 +281,10 @@ def get_feed_posts(FEED):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            if db.neg.find_one({'hash': get_hash(e['link'])}) \
-                    or db.pos.find_one({'hash': get_hash(e['link'])}) \
-                    or db.saved.find_one({'hash': get_hash(e['link'])}):
+            link = e.get('link', '')
+            if db.neg.find_one({'hash': get_hash(link)}) \
+                    or db.pos.find_one({'hash': get_hash(link)}) \
+                    or db.saved.find_one({'hash': get_hash(link)}):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
@@ -294,7 +296,7 @@ def get_feed_posts(FEED):
             news = dict({
                 'pk': i,
                 'title': e['title'],
-                'link': e['link'],
+                'link': link,
                 'score': 0,
                 'description': e['description'],
                 'published': e.get('published', '')

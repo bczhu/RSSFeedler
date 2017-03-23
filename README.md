@@ -3,6 +3,12 @@ RSSFeedler
 
 After Prismatic decided to shut down I wanted to get the same functionality -- I need my news back. But I didn't know about Flipboard existence. So I wrote this simple RSS aggregation tool with a bit of machine learning algorithms.
 
+I'm a busy man but in the same time I want to know all news I am interested in. To save a bit of time I started this project. In it I try to teach my news aggregator what news I like and what I dislike by extracting top keywords from feed entry and based on previously liked posts classify new news =). As a result classification is based on user preference and sorts by 'scores'.
+
+You can choose ML algorithm for classification in `rssnews.py` from Naive Bayes, Support Vector Machine and Decision Tree. Default is Support Vector Machine because for me it works better.
+
+On start relevant link will fall with 500 error because there will be not enough information of you likes/dislikes. You need at first read news from main feed that sorts by published date.
+
 ##### Dependencies
 
 * Docker
