@@ -17,7 +17,7 @@ FEED_DATA = []
 KEYWORDS = []
 client = pymongo.MongoClient()
 DEBUG = False
-ALGORITHM = "NB"
+ALGORITHM = "SVC"
 
 if DEBUG:
     client = pymongo.MongoClient('localhost', 27017)
@@ -34,6 +34,9 @@ if ALGORITHM == "NB":
 elif ALGORITHM == "SVC":
     from sklearn.svm import SVC
     classifier_linear = SVC(kernel='linear', probability=True)
+elif ALGORITHM == "TREE":
+    from sklearn import tree
+    classifier_linear = tree.DecisionTreeClassifier()
 
 # tf-idf implementation
 # from http://timtrueman.com/a-quick-foray-into-linear-algebra-and-python-tf-idf/
@@ -126,6 +129,7 @@ def delete(id):
 def like(id):
     keys = KEYWORDS[id]
     create_db_post(FEED_DATA[id], keys, True)
+    #update_top_keywords(keys)
 
 
 def dislike(id):
@@ -148,6 +152,12 @@ def create_db_post(entry, keys, like):
         }, upsert=True
     )
 
+
+# def update_top_keywords(keys):
+#     for key in keys:
+#         db.keywords.update({user_id:1}, {$set:{text:"Lorem ipsum", updated:new Date()}, $inc:{count:1}},
+#             true,
+#             false)
 
 def get_train_data_from_db(classes):
     train_data = []
@@ -230,10 +240,9 @@ def process(FEED):
 
     for i in range(len(test_data)):
         results = classifier_linear.predict_proba(test_vectors)[i]
-        prob_per_class_dictionary = dict(zip(classifier_linear.classes_, results))
-        print(prob_per_class_dictionary)
+        prob_per_class = dict(zip(classifier_linear.classes_, results))
 
-        news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i]['link'], 'score': prob_per_class_dictionary['pos']})
+        news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i]['link'], 'score': prob_per_class['pos']})
         news_list.append(news)
 
     t2 = time.time()
@@ -263,6 +272,10 @@ def fetch_feeds(urls):
     return entries
 
 
+def get_hash(link):
+    return hashlib.sha256(link.encode('utf-8')).hexdigest()
+
+
 def get_feed_posts(FEED):
     global FEED_DATA
     FEED_DATA = []
@@ -271,8 +284,9 @@ def get_feed_posts(FEED):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            if db.neg.find_one({'hash': hashlib.sha256(e['link'].encode('utf-8')).hexdigest()}) \
-                    or db.pos.find_one({'hash': hashlib.sha256(e['link'].encode('utf-8')).hexdigest()}):
+            if db.neg.find_one({'hash': get_hash(e['link'])}) \
+                    or db.pos.find_one({'hash': get_hash(e['link'])}) \
+                    or db.saved.find_one({'hash': get_hash(e['link'])}):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
@@ -281,7 +295,7 @@ def get_feed_posts(FEED):
 
             KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
 
-            news = dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0, 'description': e['description']})
+            news = dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0, 'description': e['description'], 'published': e.get('published', '')})
             FEED_DATA.append(news)
             i += 1
     return FEED_DATA

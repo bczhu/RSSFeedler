@@ -5,7 +5,7 @@ from flask import Flask, render_template, jsonify
 
 from rssnews import dislike, like, process, get_feed_posts, save, get_saved, delete
 
-MAX_WORDS_TITLE = 70
+MAX_WORDS_TITLE = 65
 
 try:
     from feeds import FEED
@@ -67,34 +67,29 @@ def saved_view():
 @app.route('/relevant')
 def index_relevant():
     print("ML is ON!")
-    entries_sorted = None
 
-    if entries_sorted is not None:
-        return render_template('index.html', entries=entries_sorted)
-    else:
-        # try:
-        entries_sorted = process(FEED)
-        entries_sorted = sorted(entries_sorted, key=lambda e: e['score'], reverse=True)
-        # except Exception as e:
-        #     print(e)
-        #     entries_sorted = []
-        # update_cache(tmp_file, entries_sorted)
-        data = {
-            'top': entries_sorted[:10],
-            'entries': entries_sorted[10:],
-            'count': len(entries_sorted),
-            'view_name': 'relevant',
-        }
-        return render_template('index.html', **data)
+    # try:
+    entries_sorted = process(FEED)
+    entries_sorted = sorted(entries_sorted, key=lambda e: e['score'], reverse=True)
+    # except Exception as e:
+    #     print(e)
+    #     entries_sorted = []
+    # update_cache(tmp_file, entries_sorted)
+    data = {
+        'entries': entries_sorted,
+        'count': len(entries_sorted),
+        'view_name': 'relevant',
+    }
+    return render_template('index.html', **data)
 
 
 @app.route('/')
 def index():
     print("Without ML!")
     entries_sorted = get_feed_posts(FEED)
+    entries_sorted = sorted(entries_sorted, key=lambda e: e['published'], reverse=True)
     data = {
-        'top': entries_sorted[:10],
-        'entries': entries_sorted[10:],
+        'entries': entries_sorted,
         'count': len(entries_sorted),
         'view_name': 'index',
     }

@@ -17,6 +17,21 @@
         nav {
             background-color: #90caf9;
         }
+        .pagination-page-info {
+            padding: .6em;
+            padding-left: 0;
+            width: 40em;
+            margin: .5em;
+            margin-left: 0;
+            font-size: 12px;
+        }
+        .pagination-page-info b {
+            color: black;
+            background: #6aa6ed;
+            padding-left: 2px;
+            padding: .1em .25em;
+            font-size: 150%;
+        }
     </style>
 </head>
 <body>
@@ -32,42 +47,25 @@
     </nav>
     <div class="container">
         <div class="row">
-            <h1>No bullshit - just news</h1>
+            <div class="col s8">
+                <h1>No bullshit - just news</h1>
+            </div>
+            <div class="col s4">
+
+            <!-- Yandex Weather -->
+            <a href="https://clck.yandex.ru/redir/dtype=stred/pid=7/cid=1228/*https://yandex.ru/pogoda/2" target="_blank"><img src="//info.weather.yandex.net/2/4_white.ru.png?domain=ru" border="0" alt="Яндекс.Погода"/><img width="1" height="1" src="https://clck.yandex.ru/click/dtype=stred/pid=7/cid=1227/*https://img.yandex.ru/i/pix.gif" alt="" border="0"/></a>
+            <!-- /Yandex Weather -->
+            </div>
         </div>
         <div class="row">
             <div class="collection">
-            {% for e in top %}
-                <div class="collapsible-header">
-                    <div class="col s9">
-                        <i class="large material-icons" style="color:red;">error_outline</i>
-                        <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
-                    </div>
-                    <div class="col s3">
-                        <a name="like-button" class="btn waves-effect waves-teal" value="{{ e.pk }}">
-                            <i class="material-icons">thumb_up</i>
-                        </a>
-                        <a name="dislike-button" class="btn waves-effect waves-teal"  value="{{ e.pk }}">
-                            <i class="material-icons">thumb_down</i>
-                        </a>
-                        <a name="save-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
-                            <i class="material-icons">add</i>
-                        </a>
-                        {% if view_name == "saved" %}
-                            <a name="delete-button" class="btn-floating btn-small waves-effect waves-light red" value="{{ e.pk }}">
-                                <i class="material-icons">done</i>
-                            </a>
-                        {% endif %}
-                        {{ e.score }}
-                    </div>
-                </div>
-            {% endfor %}
             {% for e in entries %}
                 <div class="collapsible-header">
-                    <div class="col s9">
+                    <div class="col s8">
                         <i class="large material-icons">info_outline</i>
                         <a target="_blank" href="{{ e.link }}">{{ e.title|cut }}</a>
                     </div>
-                    <div class="col s3">
+                    <div class="col s4">
                         <a name="like-button" class="btn waves-effect waves-teal" value="{{ e.pk }}">
                             <i class="material-icons">thumb_up</i>
                         </a>
@@ -82,7 +80,7 @@
                                 <i class="material-icons">done</i>
                             </a>
                         {% endif %}
-                        {{ e.score }}
+                        <span>{{ e.score }}</span>
                     </div>
                 </div>
             {% endfor %}
