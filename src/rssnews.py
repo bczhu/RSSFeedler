@@ -28,15 +28,16 @@ db = client['feed']
 pos = db.pos
 neg = db.neg
 
+# Choose needed algorithm for ML
 if ALGORITHM == "NB":
     from sklearn.naive_bayes import MultinomialNB
-    classifier_linear = MultinomialNB()
+    classifier = MultinomialNB()
 elif ALGORITHM == "SVC":
     from sklearn.svm import SVC
-    classifier_linear = SVC(kernel='linear', probability=True)
+    classifier = SVC(kernel='linear', probability=True)
 elif ALGORITHM == "TREE":
     from sklearn import tree
-    classifier_linear = tree.DecisionTreeClassifier()
+    classifier = tree.DecisionTreeClassifier()
 
 # tf-idf implementation
 # from http://timtrueman.com/a-quick-foray-into-linear-algebra-and-python-tf-idf/
@@ -82,9 +83,13 @@ def top_keywords(n, doc, corpus):
     return [w[0] for w in sorted_d[:n]]
 
 
-## e["media_thumbnail"][0]["url"]
 def create_news(i, e):
     return dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
+
+
+# Use sha256 - need to change to blade2
+def get_hash(link):
+    return hashlib.sha256(link.encode('utf-8')).hexdigest()
 
 
 def get_saved():
@@ -106,9 +111,10 @@ def get_saved():
     return FEED_DATA
 
 
+# Save or update news
 def save(id):
     entry = FEED_DATA[id]
-    h = hashlib.sha256(entry['link'].encode('utf-8')).hexdigest()
+    h = get_hash(entry['link'])
     return db.saved.update(
         {'hash': h},
         {
@@ -120,10 +126,10 @@ def save(id):
     )
 
 
+# Delete from saved collection
 def delete(id):
     entry = FEED_DATA[id]
-    h = hashlib.sha256(entry['link'].encode('utf-8')).hexdigest()
-    db.saved.remove({'hash': h})
+    db.saved.remove({'hash': get_hash(entry['link'])})
 
 
 def like(id):
@@ -138,7 +144,7 @@ def dislike(id):
 
 
 def create_db_post(entry, keys, like):
-    h = hashlib.sha256(entry['link'].encode('utf-8')).hexdigest()
+    h = get_hash(entry['link'])
     collection = pos if like else neg
     return collection.update(
         {'hash': h},
@@ -164,7 +170,6 @@ def get_train_data_from_db(classes):
     train_labels = []
 
     for entry in db.pos.find():
-        print(entry['content'].encode('utf8'))
         content = entry['content']
         # train algorithm by words content
         train_data.append(content)
@@ -188,8 +193,8 @@ def get_test_data(FEED):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            if db.neg.find_one({'hash': hashlib.sha256(e['link'].encode('utf-8')).hexdigest()}) \
-                    or db.pos.find_one({'hash': hashlib.sha256(e['link'].encode('utf-8')).hexdigest()}):
+            if db.neg.find_one({'hash': get_hash(e['link'])}) \
+                    or db.pos.find_one({'hash': get_hash(e['link'])}):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
@@ -199,7 +204,6 @@ def get_test_data(FEED):
             KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
 
             FEED_DATA.append(e)
-            print(e['title'].encode('utf-8'))
 
             content = html2text(e['description'])
 
@@ -208,10 +212,7 @@ def get_test_data(FEED):
     return test_data, test_labels, d
 
 
-def add_news():
-    pass
-
-
+# Main function for ML
 def process(FEED):
     classes = ['pos', 'neg']
 
@@ -226,21 +227,19 @@ def process(FEED):
                                  use_idf=True)
     train_vectors = vectorizer.fit_transform(train_data)
     test_vectors = vectorizer.transform(test_data)
-    print("Overall length: {}".format(len(test_data)))
 
     # Perform classification with SVM, kernel=linear
     t0 = time.time()
 
-    classifier_linear.fit(train_vectors, train_labels)
+    classifier.fit(train_vectors, train_labels)
     t1 = time.time()
-    prediction_linear = classifier_linear.predict(test_vectors)
-    print(prediction_linear)
+    # prediction_linear = classifier.predict(test_vectors)
 
     news_list = []
 
     for i in range(len(test_data)):
-        results = classifier_linear.predict_proba(test_vectors)[i]
-        prob_per_class = dict(zip(classifier_linear.classes_, results))
+        results = classifier.predict_proba(test_vectors)[i]
+        prob_per_class = dict(zip(classifier.classes_, results))
 
         news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i]['link'], 'score': prob_per_class['pos']})
         news_list.append(news)
@@ -272,10 +271,7 @@ def fetch_feeds(urls):
     return entries
 
 
-def get_hash(link):
-    return hashlib.sha256(link.encode('utf-8')).hexdigest()
-
-
+# Get RSS posts from needed sources
 def get_feed_posts(FEED):
     global FEED_DATA
     FEED_DATA = []
@@ -295,7 +291,14 @@ def get_feed_posts(FEED):
 
             KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
 
-            news = dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0, 'description': e['description'], 'published': e.get('published', '')})
+            news = dict({
+                'pk': i,
+                'title': e['title'],
+                'link': e['link'],
+                'score': 0,
+                'description': e['description'],
+                'published': e.get('published', '')
+            })
             FEED_DATA.append(news)
             i += 1
     return FEED_DATA

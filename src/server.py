@@ -18,7 +18,7 @@ gevent.monkey.patch_all()
 
 
 @app.template_filter('cut')
-def reverse_filter(s):
+def cut_filter(s):
     if len(s) > MAX_WORDS_TITLE:
         return "".join(s[:MAX_WORDS_TITLE]) + "..."
     return s
@@ -56,8 +56,7 @@ def dislike_view(id):
 def saved_view():
     entries_sorted = get_saved()
     data = {
-        'top': entries_sorted[:10],
-        'entries': entries_sorted[10:],
+        'entries': entries_sorted,
         'count': len(entries_sorted),
         'view_name': 'saved',
     }
