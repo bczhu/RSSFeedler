@@ -8,7 +8,7 @@ from urllib.parse import urlsplit
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from db import *
+import db
 
 FEED_DATA = []
 KEYWORDS = []
@@ -75,7 +75,7 @@ def get_saved(number_of_keywords):
     i = 0
     global FEED_DATA
     FEED_DATA = []
-    for e in get_all_saved():
+    for e in db.get_all_saved():
         words = nltk.wordpunct_tokenize(html2text(e['description']))
         words.extend(nltk.wordpunct_tokenize(e['title']))
         lowerwords = [x.lower() for x in words if len(x) > 1]
@@ -93,25 +93,25 @@ def get_saved(number_of_keywords):
 def save(id):
     """Save or update news"""
     entry = FEED_DATA[id]
-    return save_news(entry)
+    return db.save_news(entry)
 
 
 def delete(id):
     """Delete from saved collection"""
     entry = FEED_DATA[id]
-    remove_saved(entry)
+    db.remove_saved(entry)
 
 
 def like(id):
     """Like current news"""
     keys = KEYWORDS[id]
-    create_db_post(FEED_DATA[id], keys, True)
+    db.create_db_post(FEED_DATA[id], keys, True)
 
 
 def dislike(id):
     """Dislike current news"""
     keys = KEYWORDS[id]
-    create_db_post(FEED_DATA[id], keys, False)
+    db.create_db_post(FEED_DATA[id], keys, False)
 
 
 def get_train_data_from_db(classes):
@@ -144,7 +144,7 @@ def get_test_data(FEED, number_of_keywords):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            if was_read(e.get('link', '')):
+            if db.was_read(e.get('link', '')):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e.get('title', '')))
@@ -244,7 +244,7 @@ def get_feed_posts(FEED, number_of_keywords):
         d = feedparser.parse(f)
         for e in d['entries']:
             link = e.get('link', '')
-            if was_read(link):
+            if db.was_read(link):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
@@ -269,9 +269,13 @@ def get_feed_posts(FEED, number_of_keywords):
 
 def save_current(data):
     """Save current session's news"""
-    map(save_current_post, data)
+    for item in data:
+        db.save_current_post(item)
 
 
 def get_saved_current(per_page, count):
     """Get saved current session's news"""
-    return [e for e in get_current_session(per_page, count)]
+    entries = []
+    for e in db.get_current_session(per_page, count):
+        entries.append(e)
+    return entries

@@ -5,8 +5,9 @@ import gevent.monkey
 from flask import Flask, render_template, jsonify, url_for, request, redirect
 
 from rssnews import dislike, like, get_relevant_news, get_feed_posts, save, get_saved, \
-    delete, save_current, get_saved_current, count_current, remove_current
+    delete, save_current, get_saved_current
 
+from db import count_current, remove_current
 
 try:
     from feeds import FEED
@@ -119,6 +120,8 @@ def index_relevant(page):
         entries_sorted = get_relevant_news(FEED, NUMBER_OF_KEYWORDS, ALGORITHM)
         entries_sorted = sorted(entries_sorted, key=lambda e: e['score'], reverse=True)
         save_current(entries_sorted)
+        entries_sorted = entries_sorted[PER_PAGE * (page - 1): PER_PAGE * page]
+
     count = count_current() or len(entries_sorted)
     data = {
         'entries': entries_sorted,
@@ -148,6 +151,7 @@ def index(page):
     if not entries_sorted:
         entries_sorted = get_feed_posts(FEED, NUMBER_OF_KEYWORDS)
         save_current(entries_sorted)
+        entries_sorted = entries_sorted[PER_PAGE * (page - 1): PER_PAGE * page]
 
     count = count_current() or len(entries_sorted)
 
