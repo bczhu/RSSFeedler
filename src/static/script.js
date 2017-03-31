@@ -7,7 +7,6 @@ $(document).ready(function(){
 
       $.ajax({type: "POST",
             url: "/like/" + value,
-            //data: { id: $("#id").val(), access_token: $("#access_token").val() },
             success:function(result){
             }
     });
@@ -20,7 +19,6 @@ $(document).ready(function(){
 
       $.ajax({type: "POST",
             url: "/dislike/" + value,
-            //data: { id: $("#id").val(), access_token: $("#access_token").val() },
             success:function(result){
             }
     });
@@ -30,7 +28,6 @@ $(document).ready(function(){
       var value = $(this).attr("value");
       $.ajax({type: "POST",
             url: "/save/" + value,
-            //data: { id: $("#id").val(), access_token: $("#access_token").val() },
             success:function(result){}
     });
   });
@@ -40,6 +37,22 @@ $(document).ready(function(){
       $.ajax({type: "POST",
             url: "/delete/" + value,
             success:function(result){}
+    });
+  });
+  $("a[name=update-button]").click(function(e){
+      e.preventDefault();
+      var path = window.location.pathname;
+      if(path == '/'){
+          path = '';
+      }
+      else{
+          path = '/relevant'
+      }
+      $.ajax({type: "GET",
+            url: path + "/update",
+            success:function(result){
+                window.location.reload();
+            }
     });
   });
 });

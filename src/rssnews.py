@@ -1,57 +1,34 @@
-import os
 import time
 import math
 import nltk
-import hashlib
-import pymongo
 import operator
 import feedparser
 from html2text import html2text
-from gevent.pool import Pool
+from urllib.parse import urlsplit
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+from db import *
 
-NUMBER_OF_KEYWORDS = 30
 FEED_DATA = []
 KEYWORDS = []
-client = pymongo.MongoClient()
-DEBUG = False
-ALGORITHM = "SVC"
 
-if DEBUG:
-    client = pymongo.MongoClient('localhost', 27017)
-else:
-    client = pymongo.MongoClient(os.environ['DB_PORT_27017_TCP_ADDR'], 27017)
-
-db = client['feed']
-pos = db.pos
-neg = db.neg
-
-# Choose needed algorithm for ML
-if ALGORITHM == "NB":
-    from sklearn.naive_bayes import MultinomialNB
-    classifier = MultinomialNB()
-elif ALGORITHM == "SVC":
-    from sklearn.svm import SVC
-    classifier = SVC(kernel='linear', probability=True)
-elif ALGORITHM == "TREE":
-    from sklearn import tree
-    classifier = tree.DecisionTreeClassifier()
 
 # tf-idf implementation
 # from http://timtrueman.com/a-quick-foray-into-linear-algebra-and-python-tf-idf/
 
 
 def freq(word, document):
+    """Count frequency of the word in document"""
     return document.count(word)
 
 
-def wordCount(document):
+def word_count(document):
+    """Count all words in document"""
     return len(document)
 
 
-def numDocsContaining(word, documentList):
+def num_docs_containing(word, documentList):
     count = 0
     for document in documentList:
         if freq(word, document) > 0:
@@ -60,21 +37,19 @@ def numDocsContaining(word, documentList):
 
 
 def tf(word, document):
-    return (freq(word, document) / float(wordCount(document)))
+    return (freq(word, document) / float(word_count(document)))
 
 
 def idf(word, documentList):
-    return math.log(len(documentList) / numDocsContaining(word, documentList))
+    return math.log(len(documentList) / num_docs_containing(word, documentList))
 
 
 def tfidf(word, document, documentList):
     return (tf(word, document) * idf(word, documentList))
 
 
-# KEYWORDS EXTRACTION
-# extracts the top keywords from each doc
-# This defines features of a common feature vector
 def top_keywords(n, doc, corpus):
+    """Extracts the top keywords from each doc"""
     d = {}
     for word in set(doc):
         d[word] = tfidf(word, doc, corpus)
@@ -83,89 +58,64 @@ def top_keywords(n, doc, corpus):
     return [w[0] for w in sorted_d[:n]]
 
 
-def create_news(i, e):
-    return dict({'pk': i, 'title': e['title'], 'link': e['link'], 'score': 0})
+def create_news(index, entry):
+    """Create news"""
+    return dict({
+        'pk': index,
+        'title': entry.get('title', ''),
+        'link': entry.get('link', ''),
+        'score': 0,
+        'domain': entry.get('base', '')
+    })
 
 
-# Use sha256 - need to change to blade2
-def get_hash(link):
-    return hashlib.sha256(link.encode('utf-8')).hexdigest()
-
-
-def get_saved():
+def get_saved(number_of_keywords):
+    """Get saved news"""
     corpus = []
     i = 0
     global FEED_DATA
     FEED_DATA = []
-    for e in db.saved.find():
+    for e in get_all_saved():
         words = nltk.wordpunct_tokenize(html2text(e['description']))
         words.extend(nltk.wordpunct_tokenize(e['title']))
         lowerwords = [x.lower() for x in words if len(x) > 1]
         corpus.append(lowerwords)
 
-        KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
+        KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
 
         news = create_news(i, e)
         FEED_DATA.append(news)
         i += 1
+
     return FEED_DATA
 
 
-# Save or update news
 def save(id):
+    """Save or update news"""
     entry = FEED_DATA[id]
-    h = get_hash(entry['link'])
-    return db.saved.update(
-        {'hash': h},
-        {
-            'link': entry['link'],
-            'title': entry['title'],
-            'description': entry['description'],
-            'hash': h
-        }, upsert=True
-    )
+    return save_news(entry)
 
 
-# Delete from saved collection
 def delete(id):
+    """Delete from saved collection"""
     entry = FEED_DATA[id]
-    db.saved.remove({'hash': get_hash(entry['link'])})
+    remove_saved(entry)
 
 
 def like(id):
+    """Like current news"""
     keys = KEYWORDS[id]
     create_db_post(FEED_DATA[id], keys, True)
-    #update_top_keywords(keys)
 
 
 def dislike(id):
+    """Dislike current news"""
     keys = KEYWORDS[id]
     create_db_post(FEED_DATA[id], keys, False)
 
 
-def create_db_post(entry, keys, like):
-    h = get_hash(entry['link'])
-    collection = pos if like else neg
-    return collection.update(
-        {'hash': h},
-        {
-            'link': entry['link'],
-            'title': entry['title'],
-            'published': '',
-            'content': " ".join(keys),
-            'hash': h,
-            'read': False
-        }, upsert=True
-    )
-
-
-# def update_top_keywords(keys):
-#     for key in keys:
-#         db.keywords.update({user_id:1}, {$set:{text:"Lorem ipsum", updated:new Date()}, $inc:{count:1}},
-#             true,
-#             false)
-
 def get_train_data_from_db(classes):
+    """Get all classified data from database"""
     train_data = []
     train_labels = []
 
@@ -184,7 +134,8 @@ def get_train_data_from_db(classes):
     return train_data, train_labels
 
 
-def get_test_data(FEED):
+def get_test_data(FEED, number_of_keywords):
+    """Get liked/disliked data from database"""
     test_data = []
     test_labels = []
     corpus = []
@@ -193,33 +144,46 @@ def get_test_data(FEED):
     for f in FEED:
         d = feedparser.parse(f)
         for e in d['entries']:
-            link = e.get('link', '')
-            if db.neg.find_one({'hash': get_hash(link)}) \
-                    or db.pos.find_one({'hash': get_hash(link)}):
+            if was_read(e.get('link', '')):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
-            words.extend(nltk.wordpunct_tokenize(e['title']))
+            words.extend(nltk.wordpunct_tokenize(e.get('title', '')))
             lowerwords = [x.lower() for x in words if len(x) > 1]
             corpus.append(lowerwords)
 
-            KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
+            KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
 
             FEED_DATA.append(e)
 
             content = html2text(e['description'])
 
             test_data.append(content)
-            test_labels.append('neg')
+            test_labels.append('pos')
     return test_data, test_labels, d
 
 
-# Main function for ML
-def process(FEED):
+def get_classifier(algorithm):
+    """Get needed classifier"""
+    classifier = None
+    # Choose needed algorithm for ML
+    if algorithm == "NB":
+        from sklearn.naive_bayes import MultinomialNB
+        classifier = MultinomialNB()
+    elif algorithm == "SVC":
+        from sklearn.svm import SVC
+        classifier = SVC(kernel='linear', probability=True)
+    elif algorithm == "TREE":
+        from sklearn import tree
+        classifier = tree.DecisionTreeClassifier()
+    return classifier
+
+
+def get_relevant_news(FEED, number_of_keywords, algorithm):
+    """Get relevant news"""
     classes = ['pos', 'neg']
 
-    # Read the data
     train_data, train_labels = get_train_data_from_db(classes)
-    test_data, test_labels, d = get_test_data(FEED)
+    test_data, test_labels, d = get_test_data(FEED, number_of_keywords)
 
     # Create feature vectors
     vectorizer = TfidfVectorizer(min_df=3,
@@ -232,6 +196,8 @@ def process(FEED):
     # Perform classification with SVM, kernel=linear
     t0 = time.time()
 
+    classifier = get_classifier(algorithm)
+
     classifier.fit(train_vectors, train_labels)
     t1 = time.time()
     # prediction_linear = classifier.predict(test_vectors)
@@ -242,7 +208,13 @@ def process(FEED):
         results = classifier.predict_proba(test_vectors)[i]
         prob_per_class = dict(zip(classifier.classes_, results))
 
-        news = dict({'pk': i, 'title': FEED_DATA[i]['title'], 'link': FEED_DATA[i].get('link', ''), 'score': prob_per_class['pos']})
+        news = dict({
+            'pk': i,
+            'title': FEED_DATA[i]['title'],
+            'link': FEED_DATA[i].get('link', ''),
+            'score': prob_per_class['pos'],
+            'domain': FEED_DATA[i].get('base', ''),
+        })
         news_list.append(news)
 
     t2 = time.time()
@@ -255,25 +227,15 @@ def process(FEED):
     return news_list
 
 
-def fetch_feeds(urls):
-    pool = Pool(10)
-    feedparser._HTMLSanitizer.acceptable_elements = (['a'])  # We don't want anything else
-    entries = []
-
-    def get(url):
-        parsed = feedparser.parse(url)
-        if parsed.entries:
-            entries.extend(parsed.entries)
-
-    for url in urls:
-        pool.spawn(get, url)
-    pool.join()
-
-    return entries
+def get_domain(s):
+    """Parse domain name"""
+    base_url = "{0.scheme}://{0.netloc}/".format(urlsplit(s))
+    return base_url.split('://')[1]
 
 
-# Get RSS posts from needed sources
-def get_feed_posts(FEED):
+def get_feed_posts(FEED, number_of_keywords):
+    """Get RSS posts from needed sources"""
+    feedparser._HTMLSanitizer.acceptable_elements = (['a'])
     global FEED_DATA
     FEED_DATA = []
     corpus = []
@@ -282,16 +244,14 @@ def get_feed_posts(FEED):
         d = feedparser.parse(f)
         for e in d['entries']:
             link = e.get('link', '')
-            if db.neg.find_one({'hash': get_hash(link)}) \
-                    or db.pos.find_one({'hash': get_hash(link)}) \
-                    or db.saved.find_one({'hash': get_hash(link)}):
+            if was_read(link):
                 continue
             words = nltk.wordpunct_tokenize(html2text(e['description']))
             words.extend(nltk.wordpunct_tokenize(e['title']))
             lowerwords = [x.lower() for x in words if len(x) > 1]
             corpus.append(lowerwords)
 
-            KEYWORDS.append(top_keywords(NUMBER_OF_KEYWORDS, lowerwords, corpus))
+            KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
 
             news = dict({
                 'pk': i,
@@ -299,8 +259,19 @@ def get_feed_posts(FEED):
                 'link': link,
                 'score': 0,
                 'description': e['description'],
-                'published': e.get('published', '')
+                'published': e.get('published', ''),
+                'domain': get_domain(f)
             })
             FEED_DATA.append(news)
             i += 1
     return FEED_DATA
+
+
+def save_current(data):
+    """Save current session's news"""
+    map(save_current_post, data)
+
+
+def get_saved_current(per_page, count):
+    """Get saved current session's news"""
+    return [e for e in get_current_session(per_page, count)]
