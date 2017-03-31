@@ -2,7 +2,7 @@ import os
 import pymongo
 import hashlib
 
-DEBUG = True
+DEBUG = False
 
 client = pymongo.MongoClient()
 if DEBUG:
@@ -19,10 +19,12 @@ current = db.saved_current
 
 
 def get_hash(link):
+    """Get hash from link"""
     return hashlib.sha256(link.encode('utf-8')).hexdigest()
 
 
 def remove_saved(entry):
+    """Remove saved news"""
     saved.remove({'hash': get_hash(entry['link'])})
 
 
@@ -42,6 +44,7 @@ def save_news(entry):
 
 
 def get_all_saved():
+    """Get all saved news"""
     return saved.find()
 
 
