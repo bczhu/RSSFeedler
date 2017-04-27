@@ -76,7 +76,8 @@ def get_saved(number_of_keywords):
     global FEED_DATA
     FEED_DATA = []
     for e in db.get_all_saved():
-        words = nltk.wordpunct_tokenize(html2text(e['description']))
+
+        words = nltk.wordpunct_tokenize(html2text(e.get('description', '')))
         words.extend(nltk.wordpunct_tokenize(e['title']))
         lowerwords = [x.lower() for x in words if len(x) > 1]
         corpus.append(lowerwords)
@@ -146,7 +147,7 @@ def get_test_data(FEED, number_of_keywords):
         for e in d['entries']:
             if db.was_read(e.get('link', '')):
                 continue
-            words = nltk.wordpunct_tokenize(html2text(e['description']))
+            words = nltk.wordpunct_tokenize(html2text(e.get('description', '')))
             words.extend(nltk.wordpunct_tokenize(e.get('title', '')))
             lowerwords = [x.lower() for x in words if len(x) > 1]
             corpus.append(lowerwords)
@@ -155,7 +156,8 @@ def get_test_data(FEED, number_of_keywords):
 
             FEED_DATA.append(e)
 
-            content = html2text(e['description'])
+            description = e.get('description', '')
+            content = html2text(description)
 
             test_data.append(content)
             test_labels.append('pos')
@@ -184,6 +186,8 @@ def get_relevant_news(FEED, number_of_keywords, algorithm):
 
     train_data, train_labels = get_train_data_from_db(classes)
     test_data, test_labels, d = get_test_data(FEED, number_of_keywords)
+
+    print("Train data len: %s\nTest data len: %s", len(train_data), len(test_data))
 
     # Create feature vectors
     vectorizer = TfidfVectorizer(min_df=3,
@@ -246,7 +250,8 @@ def get_feed_posts(FEED, number_of_keywords):
             link = e.get('link', '')
             if db.was_read(link):
                 continue
-            words = nltk.wordpunct_tokenize(html2text(e['description']))
+            description = e.get('description', '')
+            words = nltk.wordpunct_tokenize(html2text(description))
             words.extend(nltk.wordpunct_tokenize(e['title']))
             lowerwords = [x.lower() for x in words if len(x) > 1]
             corpus.append(lowerwords)
@@ -258,7 +263,7 @@ def get_feed_posts(FEED, number_of_keywords):
                 'title': e['title'],
                 'link': link,
                 'score': 0,
-                'description': e['description'],
+                'description': description,
                 'published': e.get('published', ''),
                 'domain': get_domain(f)
             })

@@ -40,20 +40,19 @@ docker-compose up
 ##### Dump db
 
 ```bash
-mongodump -v --host $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q --filter "name=rssnews_db_1")):27017 --db 'feed' --out=./backup/
-mongodump -v --host $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q --filter "name=rssnews_db_1")):27017 --db 'saved' --out=./backup/
+./backup.sh dump
 ```
 
 
 ##### Restore db
 
 ```bash
-mongorestore --drop -v --host $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q --filter "name=rssnews_db_1")):27017 --db 'feed' ./backup/feed/
-mongorestore --drop -v --host $(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(docker ps -q --filter "name=rssnews_db_1")):27017 --db 'saved' ./backup/feed/
+./backup.sh restore
 ```
- #### Todo
- 
- - News by source tab
- - SPA 
- - Store algorithm in db 
- 
+
+
+#### Todo
+
+- News by source tab
+- SPA 
+- Store algorithm in db
