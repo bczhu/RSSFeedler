@@ -22,6 +22,10 @@ MAX_WORDS_TITLE = 65
 
 
 app = Flask(__name__, static_url_path='', static_folder='static')
+app.config.update(
+    DEBUG=True,
+    TEMPLATES_AUTO_RELOAD=True,
+)
 gevent.monkey.patch_all()
 
 
@@ -172,4 +176,5 @@ app.jinja_env.globals['url_for_other_page'] = url_for_other_page
 
 
 if __name__ == '__main__':
+    app.jinja_env.auto_reload = True
     app.run(host='0.0.0.0', threaded=True)
