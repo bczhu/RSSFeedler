@@ -19,3 +19,4 @@ six==1.10.0
 sklearn==0.0
 Werkzeug==0.12.1
 uwsgi
+livereload
