@@ -2,7 +2,7 @@ import os
 import pymongo
 import hashlib
 
-DEBUG = False
+DEBUG = True
 
 client = pymongo.MongoClient()
 if DEBUG:

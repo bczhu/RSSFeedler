@@ -1,61 +1,37 @@
 import time
-import math
-import nltk
-import operator
 import feedparser
 from html2text import html2text
 from urllib.parse import urlsplit
+from collections import Counter
 
+
+from nltk.tokenize import RegexpTokenizer
+from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 import db
+
+# extend standart words
+stop_words = stopwords.words('russian') + stopwords.words('english')
+stop_words.extend(['что', 'это', 'так', 'вот', 'быть', 'как', 'в', '—', 'к', 'на'])
 
 FEED_DATA = []
 KEYWORDS = []
 
 
-# tf-idf implementation
-# from http://timtrueman.com/a-quick-foray-into-linear-algebra-and-python-tf-idf/
-
-
-def freq(word, document):
-    """Count frequency of the word in document"""
-    return document.count(word)
-
-
-def word_count(document):
-    """Count all words in document"""
-    return len(document)
-
-
-def num_docs_containing(word, documentList):
-    count = 0
-    for document in documentList:
-        if freq(word, document) > 0:
-            count += 1
-    return count
-
-
-def tf(word, document):
-    return (freq(word, document) / float(word_count(document)))
-
-
-def idf(word, documentList):
-    return math.log(len(documentList) / num_docs_containing(word, documentList))
-
-
-def tfidf(word, document, documentList):
-    return (tf(word, document) * idf(word, documentList))
-
-
-def top_keywords(n, doc, corpus):
+def top_keywords(plain_text, number_of_keywords):
     """Extracts the top keywords from each doc"""
-    d = {}
-    for word in set(doc):
-        d[word] = tfidf(word, doc, corpus)
-    sorted_d = sorted(d.items(), key=operator.itemgetter(1))
-    sorted_d.reverse()
-    return [w[0] for w in sorted_d[:n]]
+    plain_text = plain_text.lower()
+    # tokenizer with strip punctuation
+    tokenizer = RegexpTokenizer(r'\w+')
+    # get base words from summary
+    tokens = tokenizer.tokenize(plain_text)
+    # filtering from stop words
+    filtered = [w for w in tokens if (w not in stop_words)]
+    count = Counter(filtered)
+    # get top `number_of_keywords` words
+    top_keys = [item[0] for item in count.most_common(number_of_keywords)]
+    return top_keys
 
 
 def create_news(index, entry):
@@ -71,18 +47,18 @@ def create_news(index, entry):
 
 def get_saved(number_of_keywords):
     """Get saved news"""
-    corpus = []
+    # primary key for post
     i = 0
     global FEED_DATA
     FEED_DATA = []
     for e in db.get_all_saved():
-
-        words = nltk.wordpunct_tokenize(html2text(e.get('description', '')))
-        words.extend(nltk.wordpunct_tokenize(e['title']))
-        lowerwords = [x.lower() for x in words if len(x) > 1]
-        corpus.append(lowerwords)
-
-        KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
+        title = e.get('title', '')
+        # try fields 'description' -> 'summary'
+        summary_text = e.get('description', None) or e.get('summary', '')
+        plain_text = html2text(summary_text)
+        plain_text = '{} {}'.format(plain_text, title)
+        top_keys = top_keywords(plain_text, number_of_keywords)
+        KEYWORDS.append(top_keys)
 
         news = create_news(i, e)
         FEED_DATA.append(news)
@@ -135,11 +111,10 @@ def get_train_data_from_db(classes):
     return train_data, train_labels
 
 
-def get_test_data(FEED, number_of_keywords):
-    """Get liked/disliked data from database"""
+def get_new_data(FEED, number_of_keywords):
+    """Get new data from feeds"""
     test_data = []
     test_labels = []
-    corpus = []
     global FEED_DATA
     FEED_DATA = []
     for f in FEED:
@@ -147,21 +122,23 @@ def get_test_data(FEED, number_of_keywords):
         for e in d['entries']:
             if db.was_read(e.get('link', '')):
                 continue
-            words = nltk.wordpunct_tokenize(html2text(e.get('description', '')))
-            words.extend(nltk.wordpunct_tokenize(e.get('title', '')))
-            lowerwords = [x.lower() for x in words if len(x) > 1]
-            corpus.append(lowerwords)
 
-            KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
+            title = e.get('title', '')
+            # try fields 'description' -> 'summary'
+            summary_text = e.get('description', None) or e.get('summary', '')
+            plain_text = html2text(summary_text)
+            plain_text = '{} {}'.format(plain_text, title)
+            top_keys = top_keywords(plain_text, number_of_keywords)
 
+            # append keywords
+            KEYWORDS.append(top_keys)
+            # append feed entry
             FEED_DATA.append(e)
 
-            description = e.get('description', '')
-            content = html2text(description)
-
-            test_data.append(content)
+            test_data.append(' '.join(top_keys))
+            # think that all posts are good
             test_labels.append('pos')
-    return test_data, test_labels, d
+    return test_data, test_labels
 
 
 def get_classifier(algorithm):
@@ -185,7 +162,7 @@ def get_relevant_news(FEED, number_of_keywords, algorithm):
     classes = ['pos', 'neg']
 
     train_data, train_labels = get_train_data_from_db(classes)
-    test_data, test_labels, d = get_test_data(FEED, number_of_keywords)
+    test_data, test_labels = get_new_data(FEED, number_of_keywords)
 
     print("Train data len: %s\nTest data len: %s", len(train_data), len(test_data))
 
@@ -194,14 +171,18 @@ def get_relevant_news(FEED, number_of_keywords, algorithm):
                                  max_df=0.5,
                                  sublinear_tf=True,
                                  use_idf=True)
+    # generating learning model parameters from training data then applied them
+    # upon model to generate transformed data set.
     train_vectors = vectorizer.fit_transform(train_data)
     test_vectors = vectorizer.transform(test_data)
 
-    # Perform classification with SVM, kernel=linear
     t0 = time.time()
 
+    # Perform classification
     classifier = get_classifier(algorithm)
 
+    # every request train my model(!)
+    # @TODO train only on change
     classifier.fit(train_vectors, train_labels)
     t1 = time.time()
     # prediction_linear = classifier.predict(test_vectors)
@@ -222,6 +203,7 @@ def get_relevant_news(FEED, number_of_keywords, algorithm):
         news_list.append(news)
 
     t2 = time.time()
+    # just calculating time
     time_linear_train = t1 - t0
     time_linear_predict = t2 - t1
 
@@ -234,7 +216,7 @@ def get_relevant_news(FEED, number_of_keywords, algorithm):
 def get_domain(s):
     """Parse domain name"""
     base_url = "{0.scheme}://{0.netloc}/".format(urlsplit(s))
-    return base_url.split('://')[1]
+    return base_url.split('://')[1].replace('/', '').replace('www.', '')
 
 
 def get_feed_posts(FEED, number_of_keywords):
@@ -242,7 +224,7 @@ def get_feed_posts(FEED, number_of_keywords):
     feedparser._HTMLSanitizer.acceptable_elements = (['a'])
     global FEED_DATA
     FEED_DATA = []
-    corpus = []
+    # primary key for post
     i = 0
     for f in FEED:
         d = feedparser.parse(f)
@@ -250,20 +232,21 @@ def get_feed_posts(FEED, number_of_keywords):
             link = e.get('link', '')
             if db.was_read(link):
                 continue
-            description = e.get('description', '')
-            words = nltk.wordpunct_tokenize(html2text(description))
-            words.extend(nltk.wordpunct_tokenize(e['title']))
-            lowerwords = [x.lower() for x in words if len(x) > 1]
-            corpus.append(lowerwords)
+            title = e.get('title', '')
+            # try fields 'description' -> 'summary'
+            summary_text = e.get('description', None) or e.get('summary', '')
+            plain_text = html2text(summary_text)
+            plain_text = '{} {}'.format(plain_text, title)
+            top_keys = top_keywords(plain_text, number_of_keywords)
 
-            KEYWORDS.append(top_keywords(number_of_keywords, lowerwords, corpus))
+            KEYWORDS.append(top_keys)
 
             news = dict({
                 'pk': i,
                 'title': e['title'],
                 'link': link,
                 'score': 0,
-                'description': description,
+                'description': summary_text,
                 'published': e.get('published', ''),
                 'domain': get_domain(f)
             })
